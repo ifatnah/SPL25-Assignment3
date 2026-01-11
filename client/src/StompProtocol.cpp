@@ -55,6 +55,9 @@ StompFrame StompProtocol::createSubscribeFrame(const std::string& gameName){
 
 // Creates UNSUBSCRIBE frame for leaving a game channel
 StompFrame StompProtocol::createUnsubscribeFrame(const std::string& gameName){
+        if (topicToSubscriptionId.find(gameName) == topicToSubscriptionId.end()){
+            return StompFrame();
+        }
         // Increase subscriptionId and receiptID
         int subscriptionId = topicToSubscriptionId[gameName];
         int receiptID = receiptIdCounter++;

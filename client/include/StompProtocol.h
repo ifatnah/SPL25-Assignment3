@@ -9,6 +9,7 @@ private:
     int subscriptionIdCounter;
     int receiptIdCounter;
     std::map<std::string, int> topicToSubscriptionId; 
+    std::map<int, std::string> receipts;
 
     /*
     Helper function for frames creation
