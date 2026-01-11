@@ -7,7 +7,7 @@ StompFrame::StompFrame() : command(""), headers(), body("") {}
 // Constructor with command
 StompFrame::StompFrame(const std::string &command) : command(command), headers(), body("") {}
 
-// Constructor with command
+// Constructor with command 
 StompFrame::StompFrame(const std::string &command, bool parse) : command(command), headers(), body("")
 {
     if (parse)
@@ -85,10 +85,6 @@ std::string StompFrame::toString() const
 }
 
 // Parse a string into this frame
-void StompFrame ::parse(const std::string &frameString)
-{
-}
-
 void StompFrame::parse(const std::string &frameString)
 {
     // Clear existing data
