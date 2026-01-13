@@ -190,7 +190,8 @@ std::vector<StompFrame> StompProtocol::processKeyboardCommand(const std::string 
 
 bool StompProtocol::processServerFrame(const StompFrame &frame)
 {
-    
+    // Creating a lock to prevent thread problems
+    std::lock_guard<std::mutex> lock(protocolMutex);
 
     // Check the command
     const std::string &command = frame.getCommand();
@@ -283,10 +284,6 @@ bool StompProtocol::processServerFrame(const StompFrame &frame)
 
 GameEvent StompProtocol::parseEventBody(const std::string &body)
 {
-
-    // Creating a lock to prevent thread problems
-    std::lock_guard<std::mutex> lock(protocolMutex);
-
     GameEvent event;
     std::stringstream ss(body);
     std::string line;
