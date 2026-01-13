@@ -3,6 +3,7 @@
 #include "../include/ConnectionHandler.h"
 #include "../include/event.h"
 #include "StompFrame.h"
+#include <mutex>
 
 // Structure that stores events by the client
 
@@ -27,6 +28,7 @@ private:
     std::map<int, std::string> receipts;
     std::map<std::string, std::map<std::string, std::vector<GameEvent>>> gameUpdates;
     std::string currentUserName;
+    std::mutex protocolMutex;
 
     /*
     Helper function for frames creation
@@ -41,6 +43,12 @@ private:
 
     StompFrame createSendFrame(const std::string &gameName, const std::string &messageBody);
 
+    void writeSummaryToFile(const std::string &gameName, const std::string &userName, const std::string &fileName);
+
+    std::vector<StompFrame> parseReportFromFile(const std::string &jsonFilePath);
+
+    GameEvent parseEventBody(const std::string &body);
+
 public:
     StompProtocol();
 
@@ -48,9 +56,4 @@ public:
 
     bool processServerFrame(const StompFrame &frame);
 
-    GameEvent parseEventBody(const std::string &body);
-
-    void writeSummaryToFile(const std::string &gameName, const std::string &userName, const std::string &fileName);
-
-    std::vector<StompFrame> parseReportFromFile(const std::string& jsonFilePath);
 };

@@ -3,6 +3,7 @@
 #include "../include/StompProtocol.h"
 #include <thread>
 #include <mutex>
+#include <atomic>
 
 int main(int argc, char *argv[])
 {
@@ -10,7 +11,7 @@ int main(int argc, char *argv[])
 	StompProtocol protocol;
 	ConnectionHandler *connectionHandler = nullptr;
 	std::thread *socketThread = nullptr;
-	bool isConnected = false;
+	std::atomic<bool> isConnected(false);
 
 	while (true)
 	{
@@ -24,7 +25,7 @@ int main(int argc, char *argv[])
 			break;
 		}
 
-		// spliting the user input into lines
+		// Spliting the user input into lines
 		std::string line(buf);
 		std::stringstream ss(line);
 		std::string command;
@@ -96,7 +97,6 @@ int main(int argc, char *argv[])
                         break;
                     }
                 } });
-
 		}
 
 		// Dealing with other cases that arent login
@@ -106,10 +106,10 @@ int main(int argc, char *argv[])
 			continue;
 		}
 
-		// create frames to send
+		// Create frames to send
 		std::vector<StompFrame> framesToSend = protocol.processKeyboardCommand(line);
 
-		// send frames to the server
+		// Send frames to the server
 		for (const auto &frame : framesToSend)
 		{
 			if (connectionHandler && isConnected)
@@ -123,7 +123,7 @@ int main(int argc, char *argv[])
 			}
 		}
 
-		// logout
+		// Logout
 		if (command == "logout" && socketThread)
 		{
 
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// cleaning
+	// Cleaning
 	if (socketThread)
 	{
 		if (socketThread->joinable())

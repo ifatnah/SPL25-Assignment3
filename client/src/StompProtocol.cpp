@@ -11,7 +11,8 @@ StompProtocol::StompProtocol() : subscriptionIdCounter(0),
                                  topicToSubscriptionId(),
                                  receipts(),
                                  gameUpdates(),
-                                 currentUserName("")
+                                 currentUserName(""),
+                                 protocolMutex()
 {
 }
 
@@ -98,6 +99,9 @@ StompFrame StompProtocol::createSendFrame(const std::string &gameName, const std
 
 std::vector<StompFrame> StompProtocol::processKeyboardCommand(const std::string &line)
 {
+    // Creating a lock to prevent thread problems
+    std::lock_guard<std::mutex> lock(protocolMutex);
+
     // Deconstructing the input from the user to seperate words
     std::stringstream ss(line);
     std::string word;
@@ -186,6 +190,7 @@ std::vector<StompFrame> StompProtocol::processKeyboardCommand(const std::string 
 
 bool StompProtocol::processServerFrame(const StompFrame &frame)
 {
+    
 
     // Check the command
     const std::string &command = frame.getCommand();
@@ -278,6 +283,10 @@ bool StompProtocol::processServerFrame(const StompFrame &frame)
 
 GameEvent StompProtocol::parseEventBody(const std::string &body)
 {
+
+    // Creating a lock to prevent thread problems
+    std::lock_guard<std::mutex> lock(protocolMutex);
+
     GameEvent event;
     std::stringstream ss(body);
     std::string line;
