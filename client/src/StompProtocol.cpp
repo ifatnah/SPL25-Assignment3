@@ -1,5 +1,6 @@
 #include "StompProtocol.h"
 #include "StompFrame.h"
+#include "../include/event.h"
 #include <sstream>
 #include <fstream>
 
@@ -8,7 +9,8 @@ StompProtocol::StompProtocol() : subscriptionIdCounter(0),
                                  receiptIdCounter(0),
                                  topicToSubscriptionId(),
                                  receipts(),
-                                 gameUpdates()
+                                 gameUpdates(),
+                                 currentUserName("")
 {
 }
 
@@ -93,12 +95,14 @@ StompFrame StompProtocol::createSendFrame(const std::string &gameName, const std
     return sendFrame;
 }
 
-StompFrame StompProtocol::processKeyboardCommand(const std::string &line)
+std::vector<StompFrame> StompProtocol::processKeyboardCommand(const std::string &line)
 {
     // Deconstructing the input from the user to seperate words
     std::stringstream ss(line);
     std::string word;
     std::vector<std::string> args;
+    std::vector<StompFrame> frames;
+
     while (ss >> word)
     {
         args.push_back(word);
@@ -107,7 +111,7 @@ StompFrame StompProtocol::processKeyboardCommand(const std::string &line)
     // First, check if args is empty
     if (args.empty())
     {
-        return StompFrame();
+        frames.push_back(StompFrame());
     }
     std::string command = args[0];
 
@@ -119,9 +123,9 @@ StompFrame StompProtocol::processKeyboardCommand(const std::string &line)
         // Validity check
         if (args.size() < 4)
         {
-            return StompFrame();
+            frames.push_back(StompFrame());
         }
-        return createConnectFrame(args[2], args[3]);
+        frames.push_back(createConnectFrame(args[2], args[3]));
     }
 
     // Join command
@@ -130,9 +134,9 @@ StompFrame StompProtocol::processKeyboardCommand(const std::string &line)
         // Validity check
         if (args.size() < 2)
         {
-            return StompFrame();
+            frames.push_back(StompFrame());
         }
-        return createSubscribeFrame(args[1]);
+        frames.push_back(createSubscribeFrame(args[1]));
     }
 
     // Exit command
@@ -141,21 +145,26 @@ StompFrame StompProtocol::processKeyboardCommand(const std::string &line)
         // Validity check
         if (args.size() < 2)
         {
-            return StompFrame();
+            frames.push_back(StompFrame());
         }
-        return createUnsubscribeFrame(args[1]);
+        frames.push_back(createUnsubscribeFrame(args[1]));
     }
 
     // Logout command
     else if (command == "logout")
     {
-        return createDisconnectFrame();
+        frames.push_back(createDisconnectFrame());
     }
 
     // Report command
     else if (command == "report")
     {
-        return StompFrame();
+        if (args.size() >= 2)
+        {
+            std::string jsonPath = args[1];
+            std::vector<StompFrame> reportFrames = parseReportFromFile(jsonPath);
+            frames.insert(frames.end(), reportFrames.begin(), reportFrames.end());
+        }
     }
 
     // Summary command
@@ -164,11 +173,13 @@ StompFrame StompProtocol::processKeyboardCommand(const std::string &line)
         if (args.size() < 4)
         { // gameName, userName, fileName
             std::cerr << "Error: summary command requires 3 arguments" << std::endl;
-            return StompFrame();
+            frames.push_back(StompFrame());
         }
         writeSummaryToFile(args[1], args[2], args[3]);
-        return StompFrame();
+        frames.push_back(StompFrame());
     }
+
+    return frames;
 }
 
 bool StompProtocol::processServerFrame(const StompFrame &frame)
@@ -305,7 +316,7 @@ GameEvent StompProtocol::parseEventBody(const std::string &body)
             }
             else
             {
-                // updating
+                // updates
                 if (currentSection == "general")
                     event.general_game_updates[key] = value;
                 else if (currentSection == "team_a")
@@ -334,7 +345,9 @@ void StompProtocol::writeSummaryToFile(const std::string &gameName, const std::s
 
     const std::vector<GameEvent> &events = gameUpdates[gameName][userName];
     if (events.empty())
+    {
         return;
+    }
 
     std::ofstream file(fileName);
     if (!file.is_open())
@@ -382,4 +395,50 @@ void StompProtocol::writeSummaryToFile(const std::string &gameName, const std::s
 
     file.close();
     std::cout << "Summary created: " << fileName << std::endl;
+}
+
+// Auxillary function for report case in processKeybordCommand
+std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &jsonFilePath)
+{
+    // Creating frames vector
+    std::vector<StompFrame> frames;
+    // Parse the JSON file
+    names_and_events NE = parseEventsFile(jsonFilePath);
+    // Get game name
+    std::string gameName = NE.team_a_name + "_" + NE.team_b_name;
+
+    // For each event in the structure
+    for (auto const &event : NE.events)
+    {
+        // Creating the body
+        std::string body = "user:" + currentUserName + "\n";
+        body += "team a:" + NE.team_a_name + "\n";
+        body += "team b:" + NE.team_b_name + "\n";
+        body += "event name:" + event.get_name() + "\n";
+        body += "time:" + std::to_string(event.get_time()) + "\n";
+
+        body += "general game updates:\n";
+        for (const auto &pair : event.get_game_updates())
+        {
+            body += pair.first + ":" + pair.second + "\n";
+        }
+
+        body += "team a updates:\n";
+        for (const auto &pair : event.get_team_a_updates())
+        {
+            body += pair.first + ":" + pair.second + "\n";
+        }
+
+        body += "team b updates:\n";
+        for (const auto &pair : event.get_team_b_updates())
+        {
+            body += pair.first + ":" + pair.second + "\n";
+        }
+
+        body += "description:\n" + event.get_discription();
+
+        frames.push_back(createSendFrame(gameName, body));
+    }
+
+    return frames;
 }

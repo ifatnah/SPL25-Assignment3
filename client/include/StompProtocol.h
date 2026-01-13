@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../include/ConnectionHandler.h"
+#include "../include/event.h"
 #include "StompFrame.h"
 
 // Structure that stores events by the client
@@ -25,24 +26,31 @@ private:
     std::map<std::string, int> topicToSubscriptionId;
     std::map<int, std::string> receipts;
     std::map<std::string, std::map<std::string, std::vector<GameEvent>>> gameUpdates;
+    std::string currentUserName;
 
     /*
     Helper function for frames creation
     */
     StompFrame createConnectFrame(const std::string &login, const std::string &passcode);
+
     StompFrame createDisconnectFrame();
+
     StompFrame createSubscribeFrame(const std::string &gameName);
+
     StompFrame createUnsubscribeFrame(const std::string &gameName);
+
     StompFrame createSendFrame(const std::string &gameName, const std::string &messageBody);
 
 public:
     StompProtocol();
 
-    StompFrame processKeyboardCommand(const std::string &line);
+    std::vector<StompFrame> processKeyboardCommand(const std::string &line);
 
     bool processServerFrame(const StompFrame &frame);
 
     GameEvent parseEventBody(const std::string &body);
 
     void writeSummaryToFile(const std::string &gameName, const std::string &userName, const std::string &fileName);
+
+    std::vector<StompFrame> parseReportFromFile(const std::string& jsonFilePath);
 };
