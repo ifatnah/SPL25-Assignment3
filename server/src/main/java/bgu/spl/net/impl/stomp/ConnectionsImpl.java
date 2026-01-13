@@ -25,8 +25,9 @@ public class ConnectionsImpl<T> implements Connections<T> {
         } else {
             return false;
         }
-    };
+    }
 
+    @Override
     public void send(String channel, T msg) {
         // Sending all users of a channel a message 
         CopyOnWriteArrayList<Integer> users = channels.get(channel);
@@ -35,8 +36,9 @@ public class ConnectionsImpl<T> implements Connections<T> {
                 send(user, msg);
             }
         }
-    };
+    }
 
+    @Override
     public void disconnect(int connectionId) {
         // Disconnect and remove the connectionId
         handlers.remove(connectionId);
@@ -45,7 +47,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
             entry.getValue().remove(Integer.valueOf(connectionId));
         }
 
-    };
+    }
 
     public void addConnection(int connectionId, ConnectionHandler<T> handler){
         // Add connection to handlers
