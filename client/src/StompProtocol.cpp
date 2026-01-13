@@ -3,6 +3,7 @@
 #include "../include/event.h"
 #include <sstream>
 #include <fstream>
+#include <algorithm>
 
 // Constructor
 StompProtocol::StompProtocol() : subscriptionIdCounter(0),
@@ -125,7 +126,8 @@ std::vector<StompFrame> StompProtocol::processKeyboardCommand(const std::string 
         {
             frames.push_back(StompFrame());
         }
-        frames.push_back(createConnectFrame(args[2], args[3]));
+        currentUserName = args[2];
+        frames.push_back(createConnectFrame(currentUserName, args[3]));
     }
 
     // Join command
@@ -221,6 +223,11 @@ bool StompProtocol::processServerFrame(const StompFrame &frame)
         if (!user.empty())
         {
             gameUpdates[gameName][user].push_back(event);
+            // Sort events by time immediately after insertion
+            std::sort(gameUpdates[gameName][user].begin(), gameUpdates[gameName][user].end(),
+                      [](const GameEvent &a, const GameEvent &b) {
+                          return a.time < b.time;
+                      });
         }
         // Print according to format
         std::cout << gameName << ": " << body << std::endl;
