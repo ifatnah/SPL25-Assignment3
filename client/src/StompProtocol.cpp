@@ -226,7 +226,8 @@ bool StompProtocol::processServerFrame(const StompFrame &frame)
             user = body.substr(userPos + 5, endLine - (userPos + 5));
         }
 
-        if (!user.empty())
+        
+        if (!user.empty() && user != currentUserName)
         {
             gameUpdates[gameName][user].push_back(event);
             // Sort events by time immediately after insertion
@@ -413,17 +414,32 @@ void StompProtocol::writeSummaryToFile(const std::string &gameName, const std::s
 // Auxillary function for report case in processKeybordCommand
 std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &jsonFilePath)
 {
-    // Creating frames vector
     std::vector<StompFrame> frames;
-    // Parse the JSON file
+    
+    // Parse the JSON file using the provided parser
     names_and_events NE = parseEventsFile(jsonFilePath);
-    // Get game name
+    
+    // Construct the Game Name
     std::string gameName = NE.team_a_name + "_" + NE.team_b_name;
 
-    // For each event in the structure
-    for (auto const &event : NE.events)
+    // Iterate over the events 
+    for (const auto &event : NE.events)
     {
-        // Creating the body
+        // Save to client's memory by creating a GameEvent
+        GameEvent gameEvent;
+        gameEvent.team_a_name = NE.team_a_name;
+        gameEvent.team_b_name = NE.team_b_name;
+        gameEvent.event_name = event.get_name();
+        gameEvent.time = event.get_time();
+        gameEvent.general_game_updates = event.get_game_updates();
+        gameEvent.team_a_updates = event.get_team_a_updates();
+        gameEvent.team_b_updates = event.get_team_b_updates();
+        gameEvent.description = event.get_discription();
+
+        // Add to the map under the current user
+        gameUpdates[gameName][currentUserName].push_back(gameEvent);
+
+        // Create SEND Frame 
         std::string body = "user:" + currentUserName + "\n";
         body += "team a:" + NE.team_a_name + "\n";
         body += "team b:" + NE.team_b_name + "\n";
@@ -451,6 +467,15 @@ std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &js
         body += "description:\n" + event.get_discription();
 
         frames.push_back(createSendFrame(gameName, body));
+    }
+
+    // Sort the events in memory to ensure correct order
+    if (gameUpdates[gameName].count(currentUserName)) {
+        std::sort(gameUpdates[gameName][currentUserName].begin(), 
+                  gameUpdates[gameName][currentUserName].end(),
+                  [](const GameEvent &a, const GameEvent &b) {
+                      return a.time < b.time;
+                  });
     }
 
     return frames;
