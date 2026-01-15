@@ -9,13 +9,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class ConnectionsImpl<T> implements Connections<T> {
 
-    // User -> ConnectionHandler
+    // connectionId -> ConnectionHandler
     private final ConcurrentHashMap<Integer, ConnectionHandler<T>> handlers = new ConcurrentHashMap<>();
 
     // Channel name -> list of users
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<Integer>> channels = new ConcurrentHashMap<>();
 
-    // User(connectionId) -> map of topic, id
+    // connectionId -> map of topic,subscriptionId
     private final ConcurrentHashMap<Integer, Map<String, Integer>> clientSubscriptions = new ConcurrentHashMap<>();
 
     @Override
@@ -30,15 +30,41 @@ public class ConnectionsImpl<T> implements Connections<T> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void send(String channel, T msg) {
-        // Sending all users of a channel a message 
+        // Sending all users of a channel a message
         CopyOnWriteArrayList<Integer> users = channels.get(channel);
         if (users != null) {
-            for (Integer user : users) {
-                send(user, msg);
+            for (Integer connectionId : users) {
+
+                Integer subscriptionId = null;
+                Map<String, Integer> userSubs = clientSubscriptions.get(connectionId);
+
+                if (userSubs != null) {
+                    subscriptionId = userSubs.get(channel);
+                }
+
+                if (subscriptionId != null) {
+                    String msgString = (String) msg;
+
+                    String personalizedMsg = addSubscriptionHeader(msgString, subscriptionId);
+
+                    send(connectionId, (T) personalizedMsg);
+
+                }
             }
         }
+    }
+
+    // Auxillary Function
+    private String addSubscriptionHeader(String originalMsg, int subscriptionId) {
+
+        String[] lines = originalMsg.split("\n", 2);
+        if (lines.length < 2)
+            return originalMsg;
+
+        return lines[0] + "\nsubscription:" + subscriptionId + "\n" + lines[1];
     }
 
     @Override
@@ -52,10 +78,22 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
     }
 
-    public void addConnection(int connectionId, ConnectionHandler<T> handler){
+    public void addConnection(int connectionId, ConnectionHandler<T> handler) {
         // Add connection to handlers
-        if (handlers.get(connectionId) == null){
+        if (handlers.get(connectionId) == null) {
             handlers.put(connectionId, handler);
         }
     }
+
+    public void subscribe(String channel, int connectionId, int subscriptionId) {
+
+        // If the user dosent already exists, add it to channels
+        channels.computeIfAbsent(channel, k -> new CopyOnWriteArrayList<>())
+                .add(connectionId);
+
+        // If the user dosent already exists, add it to clientSubscriptions
+        clientSubscriptions.computeIfAbsent(connectionId, k -> new ConcurrentHashMap<>())
+                .put(channel, subscriptionId);
+    }
+
 }

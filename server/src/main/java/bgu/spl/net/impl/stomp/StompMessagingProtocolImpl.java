@@ -25,6 +25,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
         StompFrame frame = StompFrame.parse(message);
 
         switch (frame.getCommand()) {
+
             case "CONNECT":
                 handleConnect(frame);
                 break;
@@ -36,12 +37,15 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
             case "SUBSCRIBE":
                 handleSubscribe(frame);
                 break;
+
             case "UNSUBSCRIBE":
                 handleUnsubscribe(frame);
                 break;
+
             case "DISCONNECT":
                 handleDisconnect(frame);
                 break;
+
             default:
                 // If command is not valid
                 connections.send(connectionId, "ERROR\nmessage:Unknown Command\n\n\u0000");
