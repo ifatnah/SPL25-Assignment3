@@ -2,111 +2,138 @@ package bgu.spl.net.impl.stomp;
 
 import bgu.spl.net.api.StompMessagingProtocol;
 import bgu.spl.net.srv.Connections;
-import bgu.spl.net.impl.stomp.StompFrame;
+import bgu.spl.net.impl.data.Database;
+import bgu.spl.net.impl.data.LoginStatus;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class StompMessagingProtocolImpl implements StompMessagingProtocol<String> {
 
     private int connectionId;
     private Connections<String> connections;
+    private boolean shouldTerminate = false;
+    private static final AtomicInteger messageIdCounter = new AtomicInteger(0);
 
     @Override
     public void start(int connectionId, Connections<String> connections) {
         this.connectionId = connectionId;
         this.connections = connections;
-    };
+    }
 
     @Override
     public void process(String message) {
-        // Parse the message
         StompFrame frame = StompFrame.parse(message);
 
-        switch (frame.getCommand()) {
+        // If the frame is empty return null
+        if (frame == null) {
+            return;
+        }
 
+        // Case Handeling
+        switch (frame.getCommand()) {
             case "CONNECT":
                 handleConnect(frame);
                 break;
-
             case "SEND":
                 handleSend(frame);
                 break;
-
             case "SUBSCRIBE":
                 handleSubscribe(frame);
                 break;
-
             case "UNSUBSCRIBE":
                 handleUnsubscribe(frame);
                 break;
-
             case "DISCONNECT":
                 handleDisconnect(frame);
                 break;
-
             default:
-                // If command is not valid
                 connections.send(connectionId, "ERROR\nmessage:Unknown Command\n\n\u0000");
                 break;
         }
-
-    };
+    }
 
     @Override
     public boolean shouldTerminate() {
-        return true;
-    };
+        return shouldTerminate;
+    }
 
     private void handleConnect(StompFrame frame) {
-        // Get login and passcode
         String login = frame.getHeader("login");
         String passcode = frame.getHeader("passcode");
-        // TODO: check login status within the sql connection and the database
+
+        // TODO
+
     }
 
     private void handleSend(StompFrame frame) {
-        // Get channel and body
         String destination = frame.getHeader("destination");
-        String message = frame.getBody();
+        String body = frame.getBody();
 
-        // Send message to all users in the channel
-        connections.send(destination, message);
-        // TODO: check login status within the sql connection and the database
+        if (destination != null) {
+            // Create a Unique msgId
+            int msgId = messageIdCounter.incrementAndGet();
+
+            // Frame building
+            String serverFrame = "MESSAGE\n" +
+                    "destination:" + destination + "\n" +
+                    "message-id:" + msgId + "\n" +
+                    "\n" +
+                    body + "\n" +
+                    "\u0000";
+
+            // send a msg to all users that subscribe to the channel
+            connections.send(destination, serverFrame);
+        }
+
+        // Reciept handeling
+        handleReceipt(frame);
     }
 
     private void handleSubscribe(StompFrame frame) {
-        // Get channel to subscribe to, id and receiptId
         String destination = frame.getHeader("destination");
-        String id = frame.getHeader("id");
-        String receipt = frame.getHeader("receipt");
+        String idStr = frame.getHeader("id");
 
-        String message = "receipt -id :" + receipt;
+        if (destination != null && idStr != null) {
+            int subscriptionId = Integer.parseInt(idStr);
 
-        // Send receiptId
-        connections.send(id, message);
+            // Connect to connectionsImpl
+            ((ConnectionsImpl<String>) connections).subscribe(destination, connectionId, subscriptionId);
+
+            // Reciept handeling
+            handleReceipt(frame);
+        }
     }
 
     private void handleUnsubscribe(StompFrame frame) {
-        // Get id and receiptId
-        String id = frame.getHeader("id");
-        String receipt = frame.getHeader("receipt");
+        String idStr = frame.getHeader("id");
+        if (idStr != null) {
+            int subscriptionId = Integer.parseInt(idStr);
 
-        String message = "receipt -id :" + receipt;
-
-        // Send receiptId
-        connections.send(id, message);
+            // TODO : add a function that delets a specific user
+            handleReceipt(frame);
+        }
     }
 
     private void handleDisconnect(StompFrame frame) {
-        // Get id and receiptId
-        String id = frame.getHeader("id");
-        String receipt = frame.getHeader("receipt");
 
-        String message = "receipt -id :" + receipt;
+        // Handle reciept
+        handleReceipt(frame);
+        // change the bool
+        shouldTerminate = true;
 
-        // Send receiptId
-        connections.send(id, message);
+        // Disconnect from connections
+        connections.disconnect(connectionId);
+    }
+
+    // Auxillary function that helps with reciept
+    private void handleReceipt(StompFrame frame) {
+        String receiptId = frame.getHeader("receipt");
+        if (receiptId != null) {
+            String receiptFrame = "RECEIPT\n" +
+                    "receipt-id:" + receiptId + "\n" +
+                    "\n" +
+                    "\u0000";
+            connections.send(connectionId, receiptFrame);
+        }
     }
 }
