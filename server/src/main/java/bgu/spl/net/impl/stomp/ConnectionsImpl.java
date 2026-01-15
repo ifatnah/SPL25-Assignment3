@@ -76,6 +76,8 @@ public class ConnectionsImpl<T> implements Connections<T> {
             entry.getValue().remove(Integer.valueOf(connectionId));
         }
 
+        clientSubscriptions.remove(connectionId);
+
     }
 
     public void addConnection(int connectionId, ConnectionHandler<T> handler) {
@@ -89,11 +91,39 @@ public class ConnectionsImpl<T> implements Connections<T> {
 
         // If the user dosent already exists, add it to channels
         channels.computeIfAbsent(channel, k -> new CopyOnWriteArrayList<>())
-                .add(connectionId);
+                .addIfAbsent(connectionId);
 
         // If the user dosent already exists, add it to clientSubscriptions
         clientSubscriptions.computeIfAbsent(connectionId, k -> new ConcurrentHashMap<>())
                 .put(channel, subscriptionId);
+    }
+
+    public void unsubscribe(String idStr, int connectionId) {
+        int subscriptionId = Integer.parseInt(idStr);
+        Map<String, Integer> userSubs = clientSubscriptions.get(connectionId);
+
+        if (userSubs != null) {
+            String channelToRemove = null;
+
+            // Look for the channel
+            for (Map.Entry<String, Integer> entry : userSubs.entrySet()) {
+                if (entry.getValue() == subscriptionId) {
+                    channelToRemove = entry.getKey();
+                    break;
+                }
+            }
+
+            // Delete it if exists
+            if (channelToRemove != null) {
+                userSubs.remove(channelToRemove);
+
+                // delete from the map
+                CopyOnWriteArrayList<Integer> subscribers = channels.get(channelToRemove);
+                if (subscribers != null) {
+                    subscribers.remove(Integer.valueOf(connectionId));
+                }
+            }
+        }
     }
 
 }

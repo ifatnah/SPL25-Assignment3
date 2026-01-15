@@ -58,11 +58,13 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     }
 
     private void handleConnect(StompFrame frame) {
-        String login = frame.getHeader("login");
-        String passcode = frame.getHeader("passcode");
+        // TODO - THIS IS NOT PERMANENT
+        String response = "CONNECTED\n" +
+                "version:1.2\n" +
+                "\n" +
+                "\u0000";
 
-        // TODO
-
+        connections.send(connectionId, response);
     }
 
     private void handleSend(StompFrame frame) {
@@ -109,7 +111,8 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
         if (idStr != null) {
             int subscriptionId = Integer.parseInt(idStr);
 
-            // TODO : add a function that delets a specific user
+            ((ConnectionsImpl<String>) connections).unsubscribe(idStr, connectionId);
+
             handleReceipt(frame);
         }
     }
