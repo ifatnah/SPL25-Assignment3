@@ -15,6 +15,9 @@ public class ConnectionsImpl<T> implements Connections<T> {
     // Channel name -> list of users
     private final ConcurrentHashMap<String, CopyOnWriteArrayList<Integer>> channels = new ConcurrentHashMap<>();
 
+    // User(connectionId) -> map of topic, id
+    private final ConcurrentHashMap<Integer, Map<String, Integer>> clientSubscriptions = new ConcurrentHashMap<>();
+
     @Override
     public boolean send(int connectionId, T msg) {
         // Sending a message to a specific user
