@@ -12,6 +12,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     private int connectionId;
     private Connections<String> connections;
     private boolean shouldTerminate = false;
+    private boolean isLoggedIn = false;
     private static final AtomicInteger messageIdCounter = new AtomicInteger(0);
 
     public StompMessagingProtocolImpl(Connections<String> connections) {
@@ -30,6 +31,12 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
 
         // If the frame is empty return null
         if (frame == null) {
+            return null;
+        }
+
+        if (!isLoggedIn && !frame.getCommand().equals("CONNECT")) {
+            connections.send(connectionId, "ERROR\nmessage:Not connected\n\nYou must Connect first\n");
+            shouldTerminate = true;
             return null;
         }
 
@@ -62,12 +69,44 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     }
 
     private void handleConnect(StompFrame frame) {
-        // TODO - THIS IS NOT PERMANENT
-        String response = "CONNECTED\n" +
-                "version:1.2\n" +
-                "\n";
+        String login = frame.getHeader("login");
+        String passcode = frame.getHeader("passcode");
+        String acceptVersion = frame.getHeader("accept-version");
 
-        connections.send(connectionId, response);
+        // Making sure every headline is correct and exists
+        if (login == null || passcode == null || acceptVersion == null) {
+            connections.send(connectionId,
+                    "ERROR\nmessage:Malformed Frame\n\nMissing login or passcode headers\n\u0000");
+            shouldTerminate = true;
+            return;
+        }
+
+        // Call the DB
+        LoginStatus status = Database.getInstance().login(connectionId, login, passcode);
+
+        if (status == LoginStatus.LOGGED_IN_SUCCESSFULLY || status == LoginStatus.ADDED_NEW_USER) {
+            // Succesful login
+            isLoggedIn = true;
+            String response = "CONNECTED\n" +
+                    "version:1.2\n" +
+                    "\n";
+            connections.send(connectionId, response);
+        } else {
+            // Handle Login Errors
+            String errorMsg = "Login failed";
+            if (status == LoginStatus.WRONG_PASSWORD) {
+                errorMsg = "Wrong password";
+            } else if (status == LoginStatus.ALREADY_LOGGED_IN) {
+                errorMsg = "User already logged in";
+            } else if (status == LoginStatus.CLIENT_ALREADY_CONNECTED) {
+                errorMsg = "Client already connected";
+            }
+
+            // Send an ERORR msg and dissconnect the user from the server
+            connections.send(connectionId, "ERROR\nmessage:Login Failed\n\n" + errorMsg + "\n");
+            shouldTerminate = true;
+            connections.disconnect(connectionId);
+        }
     }
 
     private void handleSend(StompFrame frame) {
