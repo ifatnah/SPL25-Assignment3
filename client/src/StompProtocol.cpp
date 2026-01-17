@@ -173,8 +173,6 @@ std::vector<StompFrame> StompProtocol::processKeyboardCommand(const std::string 
             std::string jsonPath = args[1];
             std::vector<StompFrame> reportFrames = parseReportFromFile(jsonPath);
             frames.insert(frames.end(), reportFrames.begin(), reportFrames.end());
-
-            std::cout << "Report sent!" << std::endl;
         }
     }
 
@@ -235,11 +233,7 @@ bool StompProtocol::processServerFrame(const StompFrame &frame)
         {
             gameUpdates[gameName][user].push_back(event);
             // Sort events by time immediately after insertion
-            std::sort(gameUpdates[gameName][user].begin(), gameUpdates[gameName][user].end(),
-                      [](const GameEvent &a, const GameEvent &b)
-                      {
-                          return a.time < b.time;
-                      });
+            std::sort(gameUpdates[gameName][user].begin(), gameUpdates[gameName][user].end(), StompProtocol::eventComparator);
         }
         // Print according to format
         std::cout << gameName << ": " << body << std::endl;
@@ -481,11 +475,26 @@ std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &js
     {
         std::sort(gameUpdates[gameName][currentUserName].begin(),
                   gameUpdates[gameName][currentUserName].end(),
-                  [](const GameEvent &a, const GameEvent &b)
-                  {
-                      return a.time < b.time;
-                  });
+                  StompProtocol::eventComparator);
     }
 
     return frames;
+}
+
+bool StompProtocol::eventComparator(const GameEvent &a, const GameEvent &b)
+{
+    bool a_has_flag = a.general_game_updates.count("before halftime");
+    bool b_has_flag = b.general_game_updates.count("before halftime");
+
+    if (a_has_flag && b_has_flag)
+    {
+        std::string a_val = a.general_game_updates.at("before halftime");
+        std::string b_val = b.general_game_updates.at("before halftime");
+
+        if (a_val == "true" && b_val == "false")
+            return true;
+        if (a_val == "false" && b_val == "true")
+            return false;
+    }
+    return a.time < b.time;
 }

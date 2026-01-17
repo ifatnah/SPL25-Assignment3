@@ -55,6 +55,8 @@ private:
     // Auxiliary functions we added to make the code clear and organized
     void writeSummaryToFile(const std::string &gameName, const std::string &userName, const std::string &fileName);
 
+    static bool eventComparator(const GameEvent &a, const GameEvent &b);
+
     std::vector<StompFrame> parseReportFromFile(const std::string &jsonFilePath);
 
     GameEvent parseEventBody(const std::string &body);

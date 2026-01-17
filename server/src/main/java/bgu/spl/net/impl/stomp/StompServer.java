@@ -1,7 +1,7 @@
 package bgu.spl.net.impl.stomp;
 
 import bgu.spl.net.srv.Server;
-import bgu.spl.net.srv.Reactor; 
+import bgu.spl.net.srv.Reactor;
 import bgu.spl.net.srv.BlockingConnectionHandler;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -20,6 +20,12 @@ public class StompServer {
         String serverType = args[1].toLowerCase();
 
         ConnectionsImpl<String> connections = new ConnectionsImpl<>();
+
+        // Creates Summary at the end of the server
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            System.out.println("Server stopping... Generating Report:");
+            bgu.spl.net.impl.data.Database.getInstance().printReport();
+        }));
 
         if (serverType.equals("tpc")) {
             runThreadPerClient(port, connections);
