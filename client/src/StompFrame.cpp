@@ -7,7 +7,7 @@ StompFrame::StompFrame() : command(""), headers(), body("") {}
 // Constructor with command
 StompFrame::StompFrame(const std::string &command) : command(command), headers(), body("") {}
 
-// Constructor with command 
+// Constructor with command
 StompFrame::StompFrame(const std::string &command, bool parse) : command(command), headers(), body("")
 {
     if (parse)
@@ -77,9 +77,6 @@ std::string StompFrame::toString() const
 
     // Body
     ss << body;
-
-    // Null terminator (^@)
-    ss << '\0';
 
     return ss.str();
 }

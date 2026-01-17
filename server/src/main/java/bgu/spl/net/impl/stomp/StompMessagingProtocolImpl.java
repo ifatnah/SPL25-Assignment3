@@ -65,8 +65,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
         // TODO - THIS IS NOT PERMANENT
         String response = "CONNECTED\n" +
                 "version:1.2\n" +
-                "\n" +
-                "\u0000";
+                "\n";
 
         connections.send(connectionId, response);
     }
@@ -84,8 +83,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
                     "destination:" + destination + "\n" +
                     "message-id:" + msgId + "\n" +
                     "\n" +
-                    body + "\n" +
-                    "\u0000";
+                    body;
 
             // send a msg to all users that subscribe to the channel
             connections.send(destination, serverFrame);
@@ -138,8 +136,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
         if (receiptId != null) {
             String receiptFrame = "RECEIPT\n" +
                     "receipt-id:" + receiptId + "\n" +
-                    "\n" +
-                    "\u0000";
+                    "\n";
             connections.send(connectionId, receiptFrame);
         }
     }

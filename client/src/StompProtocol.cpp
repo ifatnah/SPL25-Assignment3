@@ -38,7 +38,7 @@ StompFrame StompProtocol::createDisconnectFrame()
     StompFrame disconnectionFrame = StompFrame("DISCONNECT");
     disconnectionFrame.addHeader("receipt", std::to_string(receiptID));
 
-    receipts[receiptID] = "DISCONNECT";
+    receipts[receiptID] = "DISCONNECTED";
 
     return disconnectionFrame;
 }
@@ -58,7 +58,7 @@ StompFrame StompProtocol::createSubscribeFrame(const std::string &gameName)
     // add subscriptionId to map of topicToSubscriptionId
     topicToSubscriptionId[gameName] = subscriptionId;
 
-    receipts[receiptID] = "Joined channel" + gameName;
+    receipts[receiptID] = "Joined channel - " + gameName;
 
     return subscriptionFrame;
 }
@@ -81,7 +81,7 @@ StompFrame StompProtocol::createUnsubscribeFrame(const std::string &gameName)
     // erase gameName out of map of topicToSubscriptionId
     topicToSubscriptionId.erase(gameName);
 
-    receipts[receiptID] = "Exited channel " + gameName;
+    receipts[receiptID] = "Exited channel - " + gameName;
 
     return unsubscriptionFrame;
 }
@@ -130,8 +130,11 @@ std::vector<StompFrame> StompProtocol::processKeyboardCommand(const std::string 
         {
             frames.push_back(StompFrame());
         }
-        currentUserName = args[2];
-        frames.push_back(createConnectFrame(currentUserName, args[3]));
+        else
+        {
+            currentUserName = args[2];
+            frames.push_back(createConnectFrame(currentUserName, args[3]));
+        }
     }
 
     // Join command
@@ -170,6 +173,8 @@ std::vector<StompFrame> StompProtocol::processKeyboardCommand(const std::string 
             std::string jsonPath = args[1];
             std::vector<StompFrame> reportFrames = parseReportFromFile(jsonPath);
             frames.insert(frames.end(), reportFrames.begin(), reportFrames.end());
+
+            std::cout << "Report sent!" << std::endl;
         }
     }
 
@@ -226,13 +231,13 @@ bool StompProtocol::processServerFrame(const StompFrame &frame)
             user = body.substr(userPos + 5, endLine - (userPos + 5));
         }
 
-        
         if (!user.empty() && user != currentUserName)
         {
             gameUpdates[gameName][user].push_back(event);
             // Sort events by time immediately after insertion
             std::sort(gameUpdates[gameName][user].begin(), gameUpdates[gameName][user].end(),
-                      [](const GameEvent &a, const GameEvent &b) {
+                      [](const GameEvent &a, const GameEvent &b)
+                      {
                           return a.time < b.time;
                       });
         }
@@ -415,14 +420,14 @@ void StompProtocol::writeSummaryToFile(const std::string &gameName, const std::s
 std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &jsonFilePath)
 {
     std::vector<StompFrame> frames;
-    
+
     // Parse the JSON file using the provided parser
     names_and_events NE = parseEventsFile(jsonFilePath);
-    
+
     // Construct the Game Name
     std::string gameName = NE.team_a_name + "_" + NE.team_b_name;
 
-    // Iterate over the events 
+    // Iterate over the events
     for (const auto &event : NE.events)
     {
         // Save to client's memory by creating a GameEvent
@@ -439,7 +444,7 @@ std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &js
         // Add to the map under the current user
         gameUpdates[gameName][currentUserName].push_back(gameEvent);
 
-        // Create SEND Frame 
+        // Create SEND Frame
         std::string body = "user:" + currentUserName + "\n";
         body += "team a:" + NE.team_a_name + "\n";
         body += "team b:" + NE.team_b_name + "\n";
@@ -470,10 +475,12 @@ std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &js
     }
 
     // Sort the events in memory to ensure correct order
-    if (gameUpdates[gameName].count(currentUserName)) {
-        std::sort(gameUpdates[gameName][currentUserName].begin(), 
+    if (gameUpdates[gameName].count(currentUserName))
+    {
+        std::sort(gameUpdates[gameName][currentUserName].begin(),
                   gameUpdates[gameName][currentUserName].end(),
-                  [](const GameEvent &a, const GameEvent &b) {
+                  [](const GameEvent &a, const GameEvent &b)
+                  {
                       return a.time < b.time;
                   });
     }
