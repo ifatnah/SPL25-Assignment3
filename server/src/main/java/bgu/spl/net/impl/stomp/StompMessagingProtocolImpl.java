@@ -30,29 +30,29 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
 
         // If the frame is empty return null
         if (frame == null) {
-            return "Succes";
+            return null;
         }
 
         // Case Handeling
         switch (frame.getCommand()) {
             case "CONNECT":
                 handleConnect(frame);
-                return "Succes";
+                return null;
             case "SEND":
                 handleSend(frame);
-                return "Succes";
+                return null;
             case "SUBSCRIBE":
                 handleSubscribe(frame);
-                return "Succes";
+                return null;
             case "UNSUBSCRIBE":
                 handleUnsubscribe(frame);
-                return "Succes";
+                return null;
             case "DISCONNECT":
                 handleDisconnect(frame);
-                return "Succes";
+                return null;
             default:
                 connections.send(connectionId, "ERROR\nmessage:Unknown Command\n\n\u0000");
-                return "Succes";
+                return null;
         }
     }
 

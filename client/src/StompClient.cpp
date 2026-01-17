@@ -31,6 +31,11 @@ int main(int argc, char *argv[])
 		std::string command;
 		ss >> command;
 
+		if (command.empty())
+		{
+			continue;
+		}
+
 		// Handle login case
 		if (command == "login")
 		{

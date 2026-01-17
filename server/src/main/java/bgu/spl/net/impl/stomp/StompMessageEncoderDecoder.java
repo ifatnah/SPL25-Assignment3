@@ -6,8 +6,8 @@ import java.util.Arrays;
 
 public class StompMessageEncoderDecoder implements MessageEncoderDecoder<String> {
 
-    private byte[] buffer;
-    private int endByte;
+    private byte[] buffer = new byte[1024];
+    private int endByte = 0;
 
     public String decodeNextByte(byte nextByte) {
         if (nextByte == '\0') {
