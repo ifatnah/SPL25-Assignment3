@@ -160,6 +160,9 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
 
     private void handleDisconnect(StompFrame frame) {
 
+        // DB Update
+        Database.getInstance().logout(connectionId);
+
         // Handle reciept
         handleReceipt(frame);
         // change the bool
