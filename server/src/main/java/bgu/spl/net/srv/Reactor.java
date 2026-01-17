@@ -23,8 +23,14 @@ public class Reactor<T> implements Server<T> {
     private final ActorThreadPool pool;
     private Selector selector;
 
+    // ----------------------FIELDS WE ADDED------------------------------
+
+    // Holds the connections implementation for the STOMP protocol
     private final ConnectionsImpl<T> connections;
+    // Counter for unique connection IDs
     private int connectionIdCounter = 0;
+
+    // ------------------------------------------------------------------
 
     private Thread selectorThread;
     private final ConcurrentLinkedQueue<Runnable> selectorTasks = new ConcurrentLinkedQueue<>();
@@ -119,12 +125,15 @@ public class Reactor<T> implements Server<T> {
                 this);
 
         if (connections != null) {
+            // Generate unique connection ID
             int connectionId = connectionIdCounter++;
 
+            // Initialize the STOMP protocol with the connection ID and connections object
             if (protocol instanceof StompMessagingProtocol) {
                 ((StompMessagingProtocol<T>) protocol).start(connectionId, connections);
             }
 
+            // Add the new handler to the connections map
             connections.addConnection(connectionId, handler);
         }
 

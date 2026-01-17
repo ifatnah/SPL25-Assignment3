@@ -19,6 +19,7 @@ StompProtocol::StompProtocol() : subscriptionIdCounter(0),
 /*
 Helper function for frames creation
 */
+
 // Creates CONNECT frame for login
 StompFrame StompProtocol::createConnectFrame(const std::string &login, const std::string &passcode)
 {
@@ -481,6 +482,7 @@ std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &js
     return frames;
 }
 
+// Comparator ensures correct order considering by using a 'before halftime' flag
 bool StompProtocol::eventComparator(const GameEvent &a, const GameEvent &b)
 {
     bool a_has_flag = a.general_game_updates.count("before halftime");

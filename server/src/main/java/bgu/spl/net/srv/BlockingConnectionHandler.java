@@ -7,8 +7,6 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
 
 public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler<T> {
 
