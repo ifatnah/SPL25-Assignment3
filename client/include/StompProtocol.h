@@ -17,6 +17,15 @@ struct GameEvent
     std::map<std::string, std::string> team_a_updates;
     std::map<std::string, std::string> team_b_updates;
     std::string description;
+
+    GameEvent() : team_a_name(""),
+                  team_b_name(""),
+                  event_name(""),
+                  time(0),
+                  general_game_updates(),
+                  team_a_updates(),
+                  team_b_updates(),
+                  description("") {}
 };
 
 class StompProtocol
@@ -56,5 +65,4 @@ public:
     std::vector<StompFrame> processKeyboardCommand(const std::string &line);
 
     bool processServerFrame(const StompFrame &frame);
-
 };
