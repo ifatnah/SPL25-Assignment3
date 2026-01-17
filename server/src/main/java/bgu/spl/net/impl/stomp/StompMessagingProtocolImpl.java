@@ -14,6 +14,10 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     private boolean shouldTerminate = false;
     private static final AtomicInteger messageIdCounter = new AtomicInteger(0);
 
+    public StompMessagingProtocolImpl(Connections<String> connections) {
+        this.connections = connections;
+    }
+
     @Override
     public void start(int connectionId, Connections<String> connections) {
         this.connectionId = connectionId;
@@ -21,34 +25,34 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     }
 
     @Override
-    public void process(String message) {
+    public String process(String message) {
         StompFrame frame = StompFrame.parse(message);
 
         // If the frame is empty return null
         if (frame == null) {
-            return;
+            return "Succes";
         }
 
         // Case Handeling
         switch (frame.getCommand()) {
             case "CONNECT":
                 handleConnect(frame);
-                break;
+                return "Succes";
             case "SEND":
                 handleSend(frame);
-                break;
+                return "Succes";
             case "SUBSCRIBE":
                 handleSubscribe(frame);
-                break;
+                return "Succes";
             case "UNSUBSCRIBE":
                 handleUnsubscribe(frame);
-                break;
+                return "Succes";
             case "DISCONNECT":
                 handleDisconnect(frame);
-                break;
+                return "Succes";
             default:
                 connections.send(connectionId, "ERROR\nmessage:Unknown Command\n\n\u0000");
-                break;
+                return "Succes";
         }
     }
 
