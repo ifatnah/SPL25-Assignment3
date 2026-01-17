@@ -471,7 +471,9 @@ std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &js
 
         body += "description:\n" + event.get_discription();
 
-        frames.push_back(createSendFrame(gameName, body));
+        StompFrame frame = createSendFrame(gameName, body);
+        frame.addHeader("file-name", jsonFilePath);
+        frames.push_back(frame);
     }
 
     // Sort the events in memory to ensure correct order

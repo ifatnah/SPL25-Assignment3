@@ -14,6 +14,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     private boolean shouldTerminate = false;
     private boolean isLoggedIn = false;
     private static final AtomicInteger messageIdCounter = new AtomicInteger(0);
+    private String currentUsername = null;
 
     public StompMessagingProtocolImpl(Connections<String> connections) {
         this.connections = connections;
@@ -86,6 +87,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
 
         if (status == LoginStatus.LOGGED_IN_SUCCESSFULLY || status == LoginStatus.ADDED_NEW_USER) {
             // Succesful login
+            this.currentUsername = login;
             isLoggedIn = true;
             String response = "CONNECTED\n" +
                     "version:1.2\n" +
@@ -112,10 +114,15 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
     private void handleSend(StompFrame frame) {
         String destination = frame.getHeader("destination");
         String body = frame.getBody();
+        String filename = frame.getHeader("file-name");
 
         if (destination != null) {
             // Create a Unique msgId
             int msgId = messageIdCounter.incrementAndGet();
+
+            if (filename != null && currentUsername != null) {
+                Database.getInstance().trackFileUpload(currentUsername, filename, destination);
+            }
 
             // Frame building
             String serverFrame = "MESSAGE\n" +
