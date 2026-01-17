@@ -1,21 +1,16 @@
 #!/usr/bin/env python3
 """
 Basic Python Server for STOMP Assignment – Stage 3.3
-
-IMPORTANT:
-DO NOT CHANGE the server name or the basic protocol.
-Students should EXTEND this server by implementing
-the methods below.
+Implemented by Azizi
 """
 
 import socket
 import sys
 import threading
-
+import sqlite3
 
 SERVER_NAME = "STOMP_PYTHON_SQL_SERVER"  # DO NOT CHANGE!
 DB_FILE = "stomp_server.db"              # DO NOT CHANGE!
-
 
 def recv_null_terminated(sock: socket.socket) -> str:
     data = b""
@@ -28,18 +23,79 @@ def recv_null_terminated(sock: socket.socket) -> str:
             msg, _ = data.split(b"\0", 1)
             return msg.decode("utf-8", errors="replace")
 
-
 def init_database():
-    pass
+    """
+    Initialize the database tables based on the pdf requirements
+    """
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    
+    # Table for registered users
+    c.execute('''CREATE TABLE IF NOT EXISTS users
+                 (username TEXT PRIMARY KEY, 
+                  password TEXT, 
+                  registration_date TEXT)''')
 
+    # Table for login/logout history
+    c.execute('''CREATE TABLE IF NOT EXISTS login_history
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  username TEXT, 
+                  login_time TEXT, 
+                  logout_time TEXT,
+                  FOREIGN KEY(username) REFERENCES users(username))''')
 
-def execute_sql_command(sql_command: str) -> str:
-    return "done"
+    # Table for file uploads tracking
+    c.execute('''CREATE TABLE IF NOT EXISTS file_tracking
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  username TEXT, 
+                  filename TEXT, 
+                  upload_time TEXT,
+                  game_channel TEXT,
+                  FOREIGN KEY(username) REFERENCES users(username))''')
 
+    conn.commit()
+    conn.close()
+    print(f"[{SERVER_NAME}] Database initialized successfully.")
 
-def execute_sql_query(sql_query: str) -> str:
-    return "done"
+def process_sql_request(sql_msg: str) -> str:
+    """
+    Executes the SQL and returns a formatted string.
+    Format expected by Java: "SUCCESS|row1_field1, row1_field2...|row2..."
+    """
+    sql_msg = sql_msg.strip()
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    response = ""
 
+    try:
+        # Check if it's a SELECT query (Read) or Command (Write)
+        is_select = sql_msg.upper().startswith("SELECT")
+        
+        c.execute(sql_msg)
+        
+        if is_select:
+            rows = c.fetchall()
+            # Format: SUCCESS|col1, col2, col3|col1, col2, col3...
+            # This matches the split("\\|") logic in Database.java
+            formatted_rows = []
+            for row in rows:
+                # Convert all items to string and join with comma
+                row_str = ", ".join([str(item) for item in row])
+                formatted_rows.append(row_str)
+            
+            response = "SUCCESS|" + "|".join(formatted_rows)
+        else:
+            conn.commit()
+            response = "SUCCESS"
+
+    except sqlite3.Error as e:
+        response = f"ERROR:{str(e)}"
+    except Exception as e:
+        response = f"ERROR:{str(e)}"
+    finally:
+        conn.close()
+    
+    return response
 
 def handle_client(client_socket: socket.socket, addr):
     print(f"[{SERVER_NAME}] Client connected from {addr}")
@@ -50,10 +106,14 @@ def handle_client(client_socket: socket.socket, addr):
             if message == "":
                 break
 
-            print(f"[{SERVER_NAME}] Received:")
-            print(message)
-
-            client_socket.sendall(b"done\0")
+            print(f"[{SERVER_NAME}] Received SQL: {message}")
+            
+            # Execute the logic
+            result = process_sql_request(message)
+            
+            # Send back response + Null Terminator
+            response_bytes = (result + "\0").encode('utf-8')
+            client_socket.sendall(response_bytes)
 
     except Exception as e:
         print(f"[{SERVER_NAME}] Error handling client {addr}: {e}")
@@ -66,6 +126,9 @@ def handle_client(client_socket: socket.socket, addr):
 
 
 def start_server(host="127.0.0.1", port=7778):
+    # Initialize DB tables before starting
+    init_database()
+
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
