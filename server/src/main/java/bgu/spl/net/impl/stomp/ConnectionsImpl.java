@@ -57,7 +57,7 @@ public class ConnectionsImpl<T> implements Connections<T> {
         }
     }
 
-    // Auxillary Function
+    // Auxiliary Function
     private String addSubscriptionHeader(String originalMsg, int subscriptionId) {
 
         String[] lines = originalMsg.split("\n", 2);
@@ -124,6 +124,14 @@ public class ConnectionsImpl<T> implements Connections<T> {
                 }
             }
         }
+    }
+
+    public boolean isSubscribed(int connectionId, String channel) {
+        Map<String, Integer> userSubs = clientSubscriptions.get(connectionId);
+        if (userSubs == null) {
+            return false;
+        }
+        return userSubs.containsKey(channel);
     }
 
 }

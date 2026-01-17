@@ -52,7 +52,7 @@ private:
 
     StompFrame createSendFrame(const std::string &gameName, const std::string &messageBody);
 
-    // Auxillary functions we added to make the code clear and organized
+    // Auxiliary functions we added to make the code clear and organized
     void writeSummaryToFile(const std::string &gameName, const std::string &userName, const std::string &fileName);
 
     std::vector<StompFrame> parseReportFromFile(const std::string &jsonFilePath);

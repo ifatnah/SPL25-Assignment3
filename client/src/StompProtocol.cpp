@@ -416,7 +416,7 @@ void StompProtocol::writeSummaryToFile(const std::string &gameName, const std::s
     std::cout << "Summary created: " << fileName << std::endl;
 }
 
-// Auxillary function for report case in processKeybordCommand
+// Auxiliary function for report case in processKeybordCommand
 std::vector<StompFrame> StompProtocol::parseReportFromFile(const std::string &jsonFilePath)
 {
     std::vector<StompFrame> frames;

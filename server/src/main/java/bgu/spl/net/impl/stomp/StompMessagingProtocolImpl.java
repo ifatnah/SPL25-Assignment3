@@ -116,26 +116,41 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
         String body = frame.getBody();
         String filename = frame.getHeader("file-name");
 
-        if (destination != null) {
-            // Create a Unique msgId
-            int msgId = messageIdCounter.incrementAndGet();
-
-            if (filename != null && currentUsername != null) {
-                Database.getInstance().trackFileUpload(currentUsername, filename, destination);
-            }
-
-            // Frame building
-            String serverFrame = "MESSAGE\n" +
-                    "destination:" + destination + "\n" +
-                    "message-id:" + msgId + "\n" +
-                    "\n" +
-                    body;
-
-            // send a msg to all users that subscribe to the channel
-            connections.send(destination, serverFrame);
+        if (destination == null) {
+            connections.send(connectionId, "ERROR\nmessage:Malformed Frame\n\nMissing destination header\n");
+            shouldTerminate = true;
+            connections.disconnect(connectionId);
+            return;
         }
 
-        // Reciept handeling
+        // Check if user is subscribed to the topic (PDF requirement)
+        if (!((ConnectionsImpl<String>) connections).isSubscribed(connectionId, destination)) {
+            connections.send(connectionId,
+                    "ERROR\nmessage:Not subscribed\n\nYou must be subscribed to " + destination
+                            + " to send messages\n");
+            shouldTerminate = true;
+            connections.disconnect(connectionId);
+            return;
+        }
+
+        // Create a Unique msgId
+        int msgId = messageIdCounter.incrementAndGet();
+
+        if (filename != null && currentUsername != null) {
+            Database.getInstance().trackFileUpload(currentUsername, filename, destination);
+        }
+
+        // Frame building
+        String serverFrame = "MESSAGE\n" +
+                "destination:" + destination + "\n" +
+                "message-id:" + msgId + "\n" +
+                "\n" +
+                body;
+
+        // Send a msg to all users that subscribe to the channel
+        connections.send(destination, serverFrame);
+
+        // Receipt handling
         handleReceipt(frame);
     }
 
@@ -179,7 +194,7 @@ public class StompMessagingProtocolImpl implements StompMessagingProtocol<String
         connections.disconnect(connectionId);
     }
 
-    // Auxillary function that helps with reciept
+    // Auxiliary function that helps with reciept
     private void handleReceipt(StompFrame frame) {
         String receiptId = frame.getHeader("receipt");
         if (receiptId != null) {
